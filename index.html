@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogixWowTv v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #00d2ff; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050505;
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .neo-gradient {
+            background: linear-gradient(135deg, #0f172a 0%, #000000 100%);
+        }
+        .modern-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        .video-card {
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .video-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
+            transform: scale(1.02);
+        }
+        .hidden { display: none; }
+        h1, .logo-font { font-family: 'Orbitron', sans-serif; }
+    </style>
+</head>
+<body class="neo-gradient min-h-screen">
+
+    <div id="auth-page" class="flex flex-col items-center justify-center min-h-screen p-6">
+        <div class="w-full max-w-md p-10 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-black tracking-widest text-white mb-2">LOGIXWOW<span class="text-cyan-400">TV</span></h1>
+                <p class="text-xs tracking-[0.2em] text-gray-500 uppercase">Version 2.0 Network</p>
+            </div>
+
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="E-post" class="modern-input w-full p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition text-sm">
+                <input type="password" id="password" placeholder="Lösenord" class="modern-input w-full p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition text-sm">
+                
+                <button onclick="handleAuth()" id="auth-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black py-4 rounded-xl transition-all uppercase tracking-tighter shadow-lg shadow-cyan-500/20">
+                    Logga in
+                </button>
+            </div>
+
+            <p class="mt-8 text-center text-xs text-gray-500">
+                <span id="toggle-msg">Saknar du konto i nätverket?</span> 
+                <button onclick="toggleMode()" id="toggle-link" class="text-cyan-400 ml-1 hover:underline font-bold">Registrera dig</button>
+            </p>
+        </div>
+    </div>
+
+    <div id="main-page" class="hidden">
+        <header class="border-b border-white/5 p-6 flex justify-between items-center bg-black/20 sticky top-0 backdrop-blur-md z-50">
+            <div class="logo-font font-black text-xl italic tracking-tighter">LOGIXWOW<span class="text-cyan-400">TV</span></div>
+            <div class="flex items-center gap-6">
+                <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/20">NETWORK ACTIVE</span>
+                <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-white transition uppercase">Logga ut</button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-8">
+            <h2 class="text-4xl font-black mb-12 uppercase tracking-tighter italic">Tillgängliga Program</h2>
+            
+            <div id="video-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // 1. KLISTRA IN DIN FIREBASE CONFIG HÄR
+        const firebaseConfig = {
+  apiKey: "AIzaSyAFdCbL_BJJHpSB1oV-auuA0SktJNIsFx0",
+  authDomain: "logixwowtv-v2.firebaseapp.com",
+  projectId: "logixwowtv-v2",
+  storageBucket: "logixwowtv-v2.firebasestorage.app",
+  messagingSenderId: "66017109053",
+  appId: "1:66017109053:web:c799991ee91994c3b5f654"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // 2. MANUELL LISTA - LÄGG TILL DINA FILNAMN HÄR
+        const minaProgram = [
+            {
+                namn: "PROGRAM ETT",
+                thumbnail: "tumb1.jpg", 
+                videoFil: "video1.mp4"
+            },
+            {
+                namn: "PROGRAM TVÅ",
+                thumbnail: "tumb2.png", 
+                videoFil: "video2.mp4"
+            },
+            {
+                namn: "PROGRAM TRE",
+                thumbnail: "tumb3.webp", 
+                videoFil: "video3.mov"
+            }
+        ];
+
+        // --- LOGIK (RÖR EJ OM DU INTE VILL ÄNDRA FUNKTION) ---
+        let isLogin = true;
+        const authView = document.getElementById('auth-page');
+        const mainView = document.getElementById('main-page');
+
+        window.toggleMode = () => {
+            isLogin = !isLogin;
+            document.getElementById('auth-btn').innerText = isLogin ? "Logga in" : "Skapa konto";
+            document.getElementById('toggle-msg').innerText = isLogin ? "Saknar du konto?" : "Har du redan ett konto?";
+            document.getElementById('toggle-link').innerText = isLogin ? "Registrera dig" : "Logga in";
+        };
+
+        window.handleAuth = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            try {
+                if(isLogin) await signInWithEmailAndPassword(auth, email, pass);
+                else await createUserWithEmailAndPassword(auth, email, pass);
+            } catch (err) { alert("Fel vid inloggning: " + err.message); }
+        };
+
+        window.logout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authView.classList.add('hidden');
+                mainView.classList.remove('hidden');
+                window.history.pushState({}, '', '/mainpage');
+                renderContent();
+            } else {
+                authView.classList.remove('hidden');
+                mainView.classList.add('hidden');
+                window.history.pushState({}, '', '/');
+            }
+        });
+
+        function renderContent() {
+            const grid = document.getElementById('video-grid');
+            grid.innerHTML = minaProgram.map(p => `
+                <div class="video-card rounded-2xl overflow-hidden group">
+                    <div class="relative aspect-video overflow-hidden">
+                        <img src="${p.thumbnail}" class="w-full h-full object-cover transition duration-700 group-hover:scale-110">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
+                            <div class="p-3 bg-cyan-500 rounded-full text-black font-bold">SPELA</div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-4 logo-font tracking-tighter">${p.namn}</h3>
+                        <video controls class="w-full rounded-lg border border-white/10 shadow-inner bg-black">
+                            <source src="${p.videoFil}" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
